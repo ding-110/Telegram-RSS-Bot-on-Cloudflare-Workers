@@ -1,5 +1,5 @@
 #:schema node_modules/wrangler/config-schema.json
-name = "telegram-rss-bot"
+name = "tg-rss"
 main = "src/index.ts"
 compatibility_date = "2025-01-19"
 compatibility_flags = ["nodejs_compat"]
