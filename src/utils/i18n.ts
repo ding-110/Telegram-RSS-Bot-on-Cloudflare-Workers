@@ -16,13 +16,9 @@ interface Messages {
 
 const messages: Record<Language, Messages> = {
   zh: {
-    help: `RSS Bot [仓库地址与部署说明](https://github.com/lxl66566/Telegram-RSS-Bot-on-Cloudflare-Workers)
-
-/sub <rss_url> - 订阅一个 RSS 源
+    help: `/sub <rss_url> - 订阅一个 RSS 源
 /unsub <rss_url> - 取消订阅 RSS 源
-/list - 列出所有订阅的 RSS 源
-/start - 显示此帮助信息
-/lang - 切换语言 (Switch language)`,
+/list - 列出所有订阅的 RSS 源`,
     subscribe_success: "成功订阅 RSS 源：[{title}]({url})\n\n最新文章：\n{article}",
     subscribe_success_no_articles: "成功订阅 RSS 源：[{title}]({url})\n\n当前没有任何文章",
     subscribe_failed: "订阅失败：{error}",
@@ -35,13 +31,9 @@ const messages: Record<Language, Messages> = {
     article_prefix: "📰",
   },
   en: {
-    help: `RSS Bot [Repository & Deployment Guide](https://github.com/lxl66566/Telegram-RSS-Bot-on-Cloudflare-Workers)
-
-/sub <rss_url> - Subscribe to RSS feed
+    help: `/sub <rss_url> - Subscribe to RSS feed
 /unsub <rss_url> - Unsubscribe from RSS feed
-/list - List all subscribed RSS feeds
-/start - Show this help message
-/lang - Switch language (切换语言)`,
+/list - List all subscribed RSS feeds`,
     subscribe_success: "Successfully subscribed to RSS feed: [{title}]({url})\n\nLatest article:\n{article}",
     subscribe_success_no_articles: "Successfully subscribed to RSS feed: [{title}]({url})\n\nNo articles available",
     subscribe_failed: "Subscription failed: {error}",
