@@ -46,8 +46,8 @@ UPDATE_INTERVAL = 20 # 更新间隔 20 分钟
 # 请将以下内容替换为你的 D1 数据库配置，不要使用此处的！
 [[d1_databases]]
 binding = "DB"
-database_name = "telegram_rss_bot"
-database_id = "d736bdc6-8e2c-41c2-9d3f-dfcbc41b47af"
+database_name = "rss_db" 
+database_id = "744961bb-b850-4dac-92dd-7e5274dc82e6"
 
 # 触发器配置，每 20 分钟检查一次 RSS 更新
 [triggers]
