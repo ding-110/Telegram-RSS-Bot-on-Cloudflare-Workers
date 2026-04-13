@@ -74,6 +74,6 @@ export class RSSUtil {
 
   formatMessage(item: FeedItem, feedTitle?: string, lang: Language = "zh"): string {
     const prefix = getMessage(lang, "article_prefix");
-    return feedTitle ? `${prefix} ${feedTitle}: [${item.title}](${item.link})` : `${prefix} [${item.title}](${item.link})`;
+    return feedTitle ? `${prefix} ${feedTitle}:\n[${item.title}](${item.link})` : `${prefix} [${item.title}](${item.link})`;
   }
 }
