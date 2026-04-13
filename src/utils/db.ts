@@ -58,7 +58,7 @@ export class Database {
 
     try {
       // 更新数据库
-      await this.db.prepare("INSERT OR REPLACE INTO user_settings (user_id, language) VALUES (?, ?)").bind(userId, language).run();
+      await this.db.prepare("INSERT OR REPLACE INTO user_settings (user_id, language, preview_enabled) VALUES (?, ?, COALESCE((SELECT preview_enabled FROM user_settings WHERE user_id = ?), 1))").bind(userId, language, userId).run();
 
       // 删除旧的缓存
       await this.cache.delete(cacheKey);
@@ -87,6 +87,23 @@ export class Database {
       .run();
   }
 
+  async getPreviewSetting(userId: number): Promise<boolean> {
+    const result = await this.db
+      .prepare("SELECT preview_enabled FROM user_settings WHERE user_id = ?")
+      .bind(userId)
+      .first<{ preview_enabled: number }>();
+
+    return result ? result.preview_enabled === 1 : true;
+  }
+
+  async setPreviewSetting(userId: number, enabled: boolean): Promise<void> {
+    const numericValue = enabled ? 1 : 0;
+    await this.db
+      .prepare("INSERT OR REPLACE INTO user_settings (user_id, language, preview_enabled) VALUES (?, COALESCE((SELECT language FROM user_settings WHERE user_id = ?), 'zh'), ?)")
+      .bind(userId, userId, numericValue)
+      .run();
+  }
+
   async removeSubscription(userId: number, feedUrl: string): Promise<void> {
     await this.db.prepare("DELETE FROM rss_subscriptions WHERE user_id = ? AND feed_url = ?").bind(userId, feedUrl).run();
   }
@@ -107,7 +124,7 @@ export class Database {
   }
 
   async getSubscriptionsToUpdate(interval: number): Promise<RSSSubscription[]> {
-    const cutoffTime = Date.now() - interval * 60 * 1000;
+    const cutoffTime = Date.now() - interval * 1000;
     return await this.db
       .prepare("SELECT * FROM rss_subscriptions WHERE last_fetch_time IS NULL OR last_fetch_time < ?")
       .bind(cutoffTime)

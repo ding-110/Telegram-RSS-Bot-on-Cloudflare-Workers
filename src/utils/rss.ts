@@ -6,8 +6,7 @@ export interface FeedItem {
   link: string;
   guid: string;
   pubDate?: string;
-  // 不需要 content
-  // content?: string
+  summary?: string;
 }
 
 interface CacheEntry {
@@ -22,7 +21,7 @@ export class RSSUtil {
   private readonly CACHE_TTL: number;
 
   constructor(private readonly updateInterval: number) {
-    this.CACHE_TTL = updateInterval * 60 * 1000;
+    this.CACHE_TTL = updateInterval * 1000;
     this.parser = new Parser({
       timeout: 5000,
       headers: {
@@ -56,6 +55,7 @@ export class RSSUtil {
         link: item.link || url,
         guid: item.guid || item.link || "",
         pubDate: item.pubDate,
+        summary: sanitizeSummary(item.contentSnippet || item.summary || item.content || item.description),
       }));
 
       // 更新缓存
@@ -74,6 +74,19 @@ export class RSSUtil {
 
   formatMessage(item: FeedItem, feedTitle?: string, lang: Language = "zh"): string {
     const prefix = getMessage(lang, "article_prefix");
-    return feedTitle ? `${prefix} ${feedTitle}:\n[${item.title}](${item.link})` : `${prefix} [${item.title}](${item.link})`;
+    const header = feedTitle ? `${prefix} ${feedTitle}:\n[${item.title}](${item.link})` : `${prefix} [${item.title}](${item.link})`;
+    const summary = item.summary ? `\n\n${truncateSummary(item.summary, 200)}` : "";
+    return `${header}${summary}`;
   }
 }
+
+function sanitizeSummary(text?: string): string {
+  if (!text) return "";
+  return text.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+}
+
+function truncateSummary(text: string, maxLength: number): string {
+  const trimmed = text.trim();
+  return trimmed.length <= maxLength ? trimmed : `${trimmed.slice(0, maxLength)}...`;
+}
+

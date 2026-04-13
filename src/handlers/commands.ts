@@ -33,14 +33,32 @@ export class CommandHandler {
     await this.sendMessage(message.chat.id, helpText, { disable_web_page_preview: true });
   }
 
+  async handlePreview(message: Message): Promise<void> {
+    const userId = message.from?.id;
+    const chatId = message.chat.id;
+    if (!userId) return;
+
+    const lang = await this.db.getUserLanguage(userId);
+    const param = message.text?.split(" ")[1]?.toLowerCase();
+    if (param !== "on" && param !== "off") {
+      await this.sendMessage(chatId, getMessage(lang, "preview_invalid"));
+      return;
+    }
+
+    const enabled = param === "on";
+    await this.db.setPreviewSetting(chatId, enabled);
+    await this.sendMessage(chatId, getMessage(lang, enabled ? "preview_enabled" : "preview_disabled"));
+  }
+
   async handleSubscribe(message: Message): Promise<void> {
     const userId = message.from?.id;
+    const chatId = message.chat.id;
     if (!userId) return;
 
     const lang = await this.db.getUserLanguage(userId);
     const feedUrl = message.text?.split(" ")[1];
     if (!feedUrl) {
-      await this.sendMessage(message.chat.id, getMessage(lang, "url_required"));
+      await this.sendMessage(chatId, getMessage(lang, "url_required"));
       return;
     }
 
@@ -48,55 +66,57 @@ export class CommandHandler {
       // 先尝试获取 feed，确保 URL 有效
       const { items, feedTitle } = await this.rssUtil.fetchFeed(feedUrl);
 
-      // 添加订阅
-      await this.db.addSubscription(userId, feedUrl, feedTitle);
+      // 添加订阅，使用 chatId 作为推送目标
+      await this.db.addSubscription(chatId, feedUrl, feedTitle);
 
       // 更新最后获取时间和 GUID
       if (items.length > 0) {
-        await this.db.updateLastFetch(userId, feedUrl, Date.now(), items[0].guid);
+        await this.db.updateLastFetch(chatId, feedUrl, Date.now(), items[0].guid);
 
         // 发送成功订阅消息和最新文章
         const latestArticle = this.rssUtil.formatMessage(items[0], undefined, lang);
-        await this.sendMessage(message.chat.id, getMessage(lang, "subscribe_success", { title: feedTitle, url: feedUrl, article: latestArticle }));
+        await this.sendMessage(chatId, getMessage(lang, "subscribe_success", { title: feedTitle, url: feedUrl, article: latestArticle }));
       } else {
-        await this.sendMessage(message.chat.id, getMessage(lang, "subscribe_success_no_articles", { title: feedTitle, url: feedUrl }));
+        await this.sendMessage(chatId, getMessage(lang, "subscribe_success_no_articles", { title: feedTitle, url: feedUrl }));
       }
     } catch (error) {
-      await this.sendMessage(message.chat.id, getMessage(lang, "subscribe_failed", { error: error instanceof Error ? error.message : "Unknown error" }));
+      await this.sendMessage(chatId, getMessage(lang, "subscribe_failed", { error: error instanceof Error ? error.message : "Unknown error" }));
     }
   }
 
   async handleUnsubscribe(message: Message): Promise<void> {
     const userId = message.from?.id;
+    const chatId = message.chat.id;
     if (!userId) return;
 
     const lang = await this.db.getUserLanguage(userId);
     const feedUrl = message.text?.split(" ")[1];
     if (!feedUrl) {
-      await this.sendMessage(message.chat.id, getMessage(lang, "url_required"));
+      await this.sendMessage(chatId, getMessage(lang, "url_required"));
       return;
     }
 
     try {
-      await this.db.removeSubscription(userId, feedUrl);
-      await this.sendMessage(message.chat.id, getMessage(lang, "unsubscribe_success", { url: feedUrl }));
+      await this.db.removeSubscription(chatId, feedUrl);
+      await this.sendMessage(chatId, getMessage(lang, "unsubscribe_success", { url: feedUrl }));
     } catch (error) {
-      await this.sendMessage(message.chat.id, getMessage(lang, "unsubscribe_failed", { error: error instanceof Error ? error.message : "Unknown error" }));
+      await this.sendMessage(chatId, getMessage(lang, "unsubscribe_failed", { error: error instanceof Error ? error.message : "Unknown error" }));
     }
   }
 
   async handleList(message: Message): Promise<void> {
     const userId = message.from?.id;
+    const chatId = message.chat.id;
     if (!userId) return;
 
     const lang = await this.db.getUserLanguage(userId);
-    const subscriptions = await this.db.listSubscriptions(userId);
+    const subscriptions = await this.db.listSubscriptions(chatId);
     if (subscriptions.length === 0) {
-      await this.sendMessage(message.chat.id, getMessage(lang, "list_empty"));
+      await this.sendMessage(chatId, getMessage(lang, "list_empty"));
       return;
     }
 
     const subscriptionList = subscriptions.map((sub, index) => `${index + 1}. [${sub.feed_title}](${sub.feed_url})`).join("\n");
-    await this.sendMessage(message.chat.id, `${getMessage(lang, "list_header")}\n${subscriptionList}`);
+    await this.sendMessage(chatId, `${getMessage(lang, "list_header")}\n${subscriptionList}`);
   }
 }

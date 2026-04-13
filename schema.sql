@@ -15,7 +15,8 @@ CREATE TABLE
 CREATE TABLE
   IF NOT EXISTS user_settings (
     user_id INTEGER PRIMARY KEY,
-    language TEXT NOT NULL DEFAULT 'zh' -- 用户语言设置，默认中文
+    language TEXT NOT NULL DEFAULT 'zh', -- 用户语言设置，默认中文
+    preview_enabled INTEGER NOT NULL DEFAULT 1 -- 是否开启链接预览，1 开启，0 关闭
   );
 
 -- 创建索引以提高查询性能

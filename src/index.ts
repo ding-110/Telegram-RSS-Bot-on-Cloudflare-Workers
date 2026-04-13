@@ -47,6 +47,9 @@ export default {
           case "/lang":
             await commandHandler.handleLanguage(message);
             break;
+          case "/preview":
+            await commandHandler.handlePreview(message);
+            break;
         }
       } catch (error) {
         console.error("Error handling command:", error);
@@ -78,9 +81,10 @@ export default {
 
           if (newItems.length > 0) {
             // 发送更新通知
+            const previewEnabled = await db.getPreviewSetting(sub.user_id);
             const messages = newItems.map((item) => rssUtil.formatMessage(item, sub.feed_title));
             for (const message of messages) {
-              await sendMessage(env.TELEGRAM_BOT_TOKEN, sub.user_id, message);
+              await sendMessage(env.TELEGRAM_BOT_TOKEN, sub.user_id, message, { disable_web_page_preview: !previewEnabled });
             }
 
             // 更新最后获取时间和 GUID
