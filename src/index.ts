@@ -15,6 +15,25 @@ interface Env {
   UPDATE_INTERVAL: number;
 }
 
+/**
+ * 智能处理链接逻辑：自动识别订阅或退订
+ */
+async function handleSmartLink(message: TelegramMessage, handler: CommandHandler, db: Database) {
+  const text = message.text?.trim() || "";
+  const userId = message.from?.id || 0;
+  
+  // 检查这个链接是否已经在数据库里
+  const existingSub = await db.getSubscription(userId, text);
+
+  if (existingSub) {
+    // 如果存在，执行取消订阅逻辑
+    await handler.handleUnsubscribe(message);
+  } else {
+    // 如果不存在，执行订阅逻辑
+    await handler.handleSubscribe(message);
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext) {
     const db = new Database(env.DB);
@@ -29,8 +48,17 @@ export default {
         return new Response("OK");
       }
 
-      const command = message.text.split(" ")[0];
+      const text = message.text.trim();
+      const command = text.split(" ")[0];
+
       try {
+        // --- 核心逻辑：智能识别纯链接 ---
+        // 如果不是以 / 开头，且看起来像个链接
+        if (!text.startsWith("/") && (text.startsWith("http://") || text.startsWith("https://"))) {
+          await handleSmartLink(message, commandHandler, db);
+          return new Response("OK");
+        }
+
         switch (command) {
           case "/start":
             await commandHandler.handleStart(message);
@@ -67,20 +95,16 @@ export default {
     const rssUtil = new RSSUtil(env.UPDATE_INTERVAL);
 
     try {
-      // 获取所有需要更新的订阅
       const subscriptions = await db.getSubscriptionsToUpdate(env.UPDATE_INTERVAL);
       const fetchPromises = subscriptions.map(async (sub) => {
         try {
           const { items } = await rssUtil.fetchFeed(sub.feed_url);
           const lastItemGuid = sub.last_item_guid;
 
-          // 找到上次发送的文章的索引
           const lastIndex = lastItemGuid ? items.findIndex((item) => item.guid === lastItemGuid) : -1;
-          // 如果找到了上次的文章,则发送它之前的所有新文章;如果是首次订阅,只发送最新的一条
           const newItems = lastIndex >= 0 ? items.slice(0, lastIndex) : items.slice(0, 1);
 
           if (newItems.length > 0) {
-            // 发送更新通知
             const previewEnabled = await db.getPreviewSetting(sub.user_id);
             const messages = newItems.map((item) => rssUtil.formatMessage(item, sub.feed_title));
             let lastSentGuid = sub.last_item_guid;
@@ -93,7 +117,6 @@ export default {
               }
             }
 
-            // 更新最后获取时间和 GUID，如果有成功发送的
             if (lastSentGuid !== sub.last_item_guid) {
               await db.updateLastFetch(sub.user_id, sub.feed_url, Date.now(), lastSentGuid);
             }
