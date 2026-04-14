@@ -23,9 +23,6 @@ mode = "smart"
 # Note: Use secrets to store sensitive data.
 # - https://developers.cloudflare.com/workers/configuration/secrets/
 
-[vars]
-UPDATE_INTERVAL = 100 # 更新间隔 100 秒
-
 # Bind the Workers AI model catalog. Run machine learning models, powered by serverless GPUs, on Cloudflare's global network
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#workers-ai
 # [ai]
@@ -51,8 +48,11 @@ database_id = "744961bb-b850-4dac-92dd-7e5274dc82e6"
 
 # 触发器配置，每 20 分钟检查一次 RSS 更新
 [triggers]
-crons = ["*/1 * * * *"]
+[vars]
+UPDATE_INTERVAL = 300 # 统一改成 300 秒（5分钟）
 
+[triggers]
+crons = ["*/5 * * * *"] # 统一改成每 5 分钟唤醒一次
 # Bind a dispatch namespace. Use Workers for Platforms to deploy serverless functions programmatically on behalf of your customers.
 # Docs: https://developers.cloudflare.com/workers/wrangler/configuration/#dispatch-namespace-bindings-workers-for-platforms
 # [[dispatch_namespaces]]
