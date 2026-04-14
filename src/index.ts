@@ -20,10 +20,13 @@ interface Env {
  */
 async function handleSmartLink(message: TelegramMessage, handler: CommandHandler, db: Database) {
   const text = message.text?.trim() || "";
-  const userId = message.from?.id || 0;
+  const chatId = message.chat.id;
   
-  // 检查这个链接是否已经在数据库里
-  const existingSub = await db.getSubscription(userId, text);
+  // 使用原项目已有的 listSubscriptions 方法，获取当前聊天的所有订阅
+  const subscriptions = await db.listSubscriptions(chatId);
+
+  // 检查发来的链接是否在订阅列表中
+  const existingSub = subscriptions.find((sub: any) => sub.feed_url === text);
 
   if (existingSub) {
     // 如果存在，执行取消订阅逻辑
