@@ -83,12 +83,20 @@ export default {
             // 发送更新通知
             const previewEnabled = await db.getPreviewSetting(sub.user_id);
             const messages = newItems.map((item) => rssUtil.formatMessage(item, sub.feed_title));
-            for (const message of messages) {
-              await sendMessage(env.TELEGRAM_BOT_TOKEN, sub.user_id, message, { disable_web_page_preview: !previewEnabled });
+            let lastSentGuid = sub.last_item_guid;
+            for (const [index, message] of messages.entries()) {
+              try {
+                await sendMessage(env.TELEGRAM_BOT_TOKEN, sub.user_id, message, { disable_web_page_preview: !previewEnabled });
+                lastSentGuid = newItems[index].guid;
+              } catch (error) {
+                console.error(`Failed to send message for ${newItems[index].title}:`, error);
+              }
             }
 
-            // 更新最后获取时间和 GUID
-            await db.updateLastFetch(sub.user_id, sub.feed_url, Date.now(), items[0].guid);
+            // 更新最后获取时间和 GUID，如果有成功发送的
+            if (lastSentGuid !== sub.last_item_guid) {
+              await db.updateLastFetch(sub.user_id, sub.feed_url, Date.now(), lastSentGuid);
+            }
           }
         } catch (error) {
           console.error(`Error processing subscription ${sub.feed_url}:`, error);

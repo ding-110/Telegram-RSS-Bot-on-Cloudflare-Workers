@@ -53,7 +53,7 @@ export class RSSUtil {
       const items = feed.items.map((item) => ({
         title: item.title || "Untitled",
         link: item.link || url,
-        guid: item.guid || item.link || "",
+        guid: item.guid || `${item.link || url}_${item.pubDate || item.title || Math.random()}`,
         pubDate: item.pubDate,
         summary: sanitizeSummary(item.contentSnippet || item.summary || item.content || item.description),
       }));
