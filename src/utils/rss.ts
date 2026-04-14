@@ -23,7 +23,7 @@ export class RSSUtil {
   constructor(private readonly updateInterval: number) {
     this.CACHE_TTL = updateInterval * 1000;
     this.parser = new Parser({
-      timeout: 5000,
+      timeout: 3000, // 优化：将 5000ms 减少到 3000ms，减轻 Worker 负担
       headers: {
         "User-Agent": "Telegram RSS Bot/1.0",
       },
@@ -33,8 +33,6 @@ export class RSSUtil {
 
   /**
    * 获取 RSS 源的最新文章
-   * @param url - RSS 源的 URL
-   * @returns 包含文章和源标题的对象。如果没有获取到标题，则使用 URL 作为标题
    */
   async fetchFeed(url: string): Promise<{ items: FeedItem[]; feedTitle: string }> {
     // 检查缓存
@@ -47,13 +45,13 @@ export class RSSUtil {
     try {
       const response = await fetch(url);
       const xml = await response.text();
-      // Do not use `parseURL`: cloudflare worker does not support https.get
-      // Failed to fetch RSS feed: [unenv] https.get is not implemented yet!
       const feed = await this.parser.parseString(xml);
+      
       const items = feed.items.map((item) => ({
         title: item.title || "Untitled",
         link: item.link || url,
-        guid: item.guid || `${item.link || url}_${item.pubDate || item.title || Math.random()}`,
+        // 核心修复：移除 Math.random()，使用固定属性生成 GUID 以防止重复推送
+        guid: item.guid || item.link || `${url}_${item.title || 'no-title'}_${item.pubDate || ''}`,
         pubDate: item.pubDate,
         summary: sanitizeSummary(item.contentSnippet || item.summary || item.content || item.description),
       }));
@@ -75,13 +73,15 @@ export class RSSUtil {
   formatMessage(item: FeedItem, feedTitle?: string, lang: Language = "zh"): string {
     const prefix = getMessage(lang, "article_prefix");
     const header = feedTitle ? `${prefix} ${feedTitle}:\n[${item.title}](${item.link})` : `${prefix} [${item.title}](${item.link})`;
-    const summary = item.summary ? `\n\n${truncateSummary(item.summary, 200)}` : "";
+    // 优化：将摘要长度限制从 200 缩减至 100，节省 CPU 和消息空间
+    const summary = item.summary ? `\n\n${truncateSummary(item.summary, 100)}` : "";
     return `${header}${summary}`;
   }
 }
 
 function sanitizeSummary(text?: string): string {
   if (!text) return "";
+  // 移除 HTML 标签和多余空格
   return text.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
 }
 
@@ -89,4 +89,3 @@ function truncateSummary(text: string, maxLength: number): string {
   const trimmed = text.trim();
   return trimmed.length <= maxLength ? trimmed : `${trimmed.slice(0, maxLength)}...`;
 }
-
