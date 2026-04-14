@@ -56,7 +56,11 @@ export class CommandHandler {
     if (!userId) return;
 
     const lang = await this.db.getUserLanguage(userId);
-    const feedUrl = message.text?.split(" ")[1];
+    
+    // 核心修改：如果文本中有空格，取第二部分（对应 /sub url）；如果没有空格，取整条文本（对应直接发链接）
+    const textParts = message.text?.trim().split(" ");
+    const feedUrl = textParts && textParts.length > 1 ? textParts[1] : textParts?.[0];
+
     if (!feedUrl) {
       await this.sendMessage(chatId, getMessage(lang, "url_required"));
       return;
@@ -90,7 +94,11 @@ export class CommandHandler {
     if (!userId) return;
 
     const lang = await this.db.getUserLanguage(userId);
-    const feedUrl = message.text?.split(" ")[1];
+    
+    // 核心修改：同上，兼容命令模式和直接链接模式
+    const textParts = message.text?.trim().split(" ");
+    const feedUrl = textParts && textParts.length > 1 ? textParts[1] : textParts?.[0];
+
     if (!feedUrl) {
       await this.sendMessage(chatId, getMessage(lang, "url_required"));
       return;
